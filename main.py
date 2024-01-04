@@ -27,7 +27,7 @@ def query_yes_no(question, default="yes"):
 
     while True:
         sys.stdout.write(question + prompt)
-        choice = raw_input().lower()
+        choice = input().lower()
         if default is not None and choice == '':
             return valid[default]
         elif choice in valid:
@@ -39,8 +39,8 @@ def query_yes_no(question, default="yes"):
 
 if __name__ == '__main__':
     for filename in list_apk(current_path()):
-        print 'After this operation, the Android application package will be installed:'
-        print '  '+filename
+        print('After this operation, the Android application package will be installed:')
+        print('  ' + filename)
         if query_yes_no('Do you want to continue ?', 'yes'):
             subprocess.call("adb install -r " + filename, shell=True)
         else:
