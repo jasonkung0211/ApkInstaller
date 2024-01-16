@@ -41,20 +41,25 @@ def query_yes_no(question, default="yes"):
 
 def scanDevices():
     clients_list = []
+    substring = "unauthorized"
     out = subprocess.check_output("adb devices -l", shell=True).splitlines()
     for line in out[1:]:
         if not line.strip():
             continue
 
         ids = line[0:str(line).index(" ") - 2]
-        product = line[str(line).index("t:"):]
-        product = product[:str(product).index(" ") - 2]
-        model = line[str(line).index("l:"):]
-        model = model[:str(model).index(" ") - 2]
-        device = line[str(line).index("e:"):]
-        device = device[:str(device).index(" ") - 2]
-        port_id = line[str(line).index("d:"):]
-        clients_list.append(AndroidDevice(ids.decode("utf-8"), product.decode("utf-8"), model.decode("utf-8"), device.decode("utf-8"), port_id.decode("utf-8")))
+
+        if substring in line.decode("UTF-8"):
+            clients_list.append(AndroidDevice(ids.decode("utf-8")))
+        else:
+            product = line[str(line).index("t:"):]
+            product = product[:str(product).index(" ") - 2]
+            model = line[str(line).index("l:"):]
+            model = model[:str(model).index(" ") - 2]
+            device = line[str(line).index("e:"):]
+            device = device[:str(device).index(" ") - 2]
+            port_id = line[str(line).index("d:"):]
+            clients_list.append(AndroidDevice(ids.decode("utf-8"), product.decode("utf-8"), model.decode("utf-8"), device.decode("utf-8"), port_id.decode("utf-8")))
 
     return clients_list
 
