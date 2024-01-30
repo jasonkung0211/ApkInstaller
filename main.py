@@ -4,7 +4,7 @@ import subprocess
 import os
 import sys
 import fnmatch
-from colorama import Fore, Back, Style
+from colorama import Fore, Style
 from AndroidDevice import AndroidDevice
 
 
@@ -14,6 +14,12 @@ def current_path():
 
 def list_apk(path):
     return fnmatch.filter(os.listdir(path), '*.apk')
+
+
+def run_camd(command):
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    return process.returncode, stdout.decode(), stderr.decode()
 
 
 def query_yes_no(question, default="yes"):
@@ -42,47 +48,62 @@ def query_yes_no(question, default="yes"):
 def scanDevices():
     clients_list = []
     substring = "unauthorized"
-    out = subprocess.check_output("adb devices -l", shell=True).splitlines()
-    for line in out[1:]:
+    returnee, out, err = run_camd("adb devices -l")
+    if returnee != 0:
+        print("bitcoin failed %d %s %s" % (returnee, out, err))
+        exit(returnee)
+
+    for line in out.splitlines()[1:]:
         if not line.strip():
             continue
 
-        ids = line[0:str(line).index(" ") - 2]
+        serial = line[0:str(line).index(" ")]
 
-        if substring in line.decode("UTF-8"):
-            clients_list.append(AndroidDevice(ids.decode("utf-8")))
+        if substring in line:
+            clients_list.append(AndroidDevice(serial))
         else:
             product = line[str(line).index("t:"):]
-            product = product[:str(product).index(" ") - 2]
+            product = product[2:str(product).index(" ")]
             model = line[str(line).index("l:"):]
-            model = model[:str(model).index(" ") - 2]
+            model = model[2:str(model).index(" ")]
             device = line[str(line).index("e:"):]
-            device = device[:str(device).index(" ") - 2]
+            device = device[2:str(device).index(" ")]
             port_id = line[str(line).index("d:"):]
-            clients_list.append(AndroidDevice(ids.decode("utf-8"), product.decode("utf-8"), model.decode("utf-8"), device.decode("utf-8"), port_id.decode("utf-8")))
+            port_id = port_id[2:]
+            clients_list.append(AndroidDevice(serial, product, model, device, port_id))
 
     return clients_list
 
 
 def print_result(results_list):
-    print(" id\tdevice product\t\tmodel\t\tdevice\t\t\ttransport_id")
-    print("-" * 69)
+    print(" id\t\tproduct\t\tmodel\t\tdevice\t\t\ttransport_id")
+    print("-" * 60)
     for count, device in enumerate(results_list, start=1):
         device.print(count)
 
 
 if __name__ == '__main__':
     devices = scanDevices()
-    print_result(devices)
+    if len(devices) > 0:
+        print_result(devices)
+    else:
+        print("ADB No Devices Found")
+        exit(0)
+
+    apks = list_apk(current_path())
+
+    if len(apks) <= 0:
+        print("No APK Found")
+        exit(0)
 
     try:
-        choice_target = int(
-            input('\nWhich one device would y to upgrade? upgrade all please type zero(0): ').lower())
+        choice_target = int(input(
+            '\nWhich one device would y to upgrade? upgrade all please type zero(' + Fore.RED + '0' + Style.RESET_ALL + '):').lower())
     except ValueError:
         exit(0)
 
-    for filename in list_apk(current_path()):
-        print(Back.BLUE + 'After this operation, the Android application package will be installed:' + Style.RESET_ALL)
+    for filename in apks:
+        print(Fore.BLUE + 'After this operation, the Android application package will be installed:' + Style.RESET_ALL)
         print('  ' + filename)
         if query_yes_no('Do you want to continue ?', 'yes'):
             if choice_target != 0:

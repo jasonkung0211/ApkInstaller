@@ -1,8 +1,3 @@
-import atexit
-import logging
-import os
-import re
-import subprocess
 from colorama import Fore, Style
 
 
@@ -24,9 +19,9 @@ class AndroidDevice(object):
         self._features = None
 
     def print(self, count):
-        print(Fore.RED + "{:-2d}".format(count) + Style.RESET_ALL + "   {} \t\t\t {} \t {} \t\t\t {}".format(self.product,
-                                                                                                      self.model,
-                                                                                                      self.device,
-                                                                                                      self.transport))
-        print(Style.RESET_ALL)
+        len0 = 2 * 2 - len(self.product) + len("product")
+        len1 = 2 * 2 - len(self.model) + len("model")
+        len2 = 2 * 3 - len(self.device) + len("device")
+        len3 = 2 * 3 - len(self.transport) + len("transport_id")
+        print(Fore.RED + "{:-2d}".format(count) + Style.RESET_ALL, len0 * ' ', self.product, len1 * ' ', self.model, len2 * ' ', self.device, len3 * ' ', self.transport, Style.RESET_ALL)
         return
