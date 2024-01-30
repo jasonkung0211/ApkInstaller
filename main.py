@@ -1,23 +1,24 @@
 #!/usr/bin/python
 
-import subprocess
-import os
-import sys
 import fnmatch
+import os
+import subprocess
+import sys
+
 from colorama import Fore, Style
 from AndroidDevice import AndroidDevice
 
 
-def current_path():
-    return os.path.dirname(os.path.abspath(__file__))
+def current_path(file):
+    return os.path.dirname(os.path.abspath(file))
 
 
 def list_apk(path):
-    return fnmatch.filter(os.listdir(path), '*.apk')
+    return fnmatch.filter(os.listdir(current_path(path)), '*.apk')
 
 
 def run_camd(command):
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     return process.returncode, stdout.decode(), stderr.decode()
 
@@ -45,7 +46,7 @@ def query_yes_no(question, default="yes"):
                              "(or 'y' or 'n').\n")
 
 
-def scanDevices():
+def scan_devices():
     clients_list = []
     substring = "unauthorized"
     returnee, out, err = run_camd("adb devices -l")
@@ -83,33 +84,50 @@ def print_result(results_list):
 
 
 if __name__ == '__main__':
-    devices = scanDevices()
+    devices = scan_devices()
     if len(devices) > 0:
         print_result(devices)
     else:
         print("ADB No Devices Found")
-        exit(0)
+        exit(-1)
 
-    apks = list_apk(current_path())
+    apks = []
+    if len(sys.argv) > 1:
+        for root, dirs, files in os.walk(sys.argv[1]):
+            for filename in fnmatch.filter(files, '*.apk'):
+                apks.append(os.path.join(root, filename))
+    else:
+        if getattr(sys, 'frozen', False):
+            apks = list_apk(sys.executable)
+        else:
+            apks = list_apk(__file__)
 
     if len(apks) <= 0:
         print("No APK Found")
-        exit(0)
+        exit(-1)
 
     try:
         choice_target = int(input(
             '\nWhich one device would y to upgrade? upgrade all please type zero(' + Fore.RED + '0' + Style.RESET_ALL + '):').lower())
     except ValueError:
-        exit(0)
+        exit(-1)
 
     for filename in apks:
-        print(Fore.BLUE + 'After this operation, the Android application package will be installed:' + Style.RESET_ALL)
-        print('  ' + filename)
+        print(
+            Fore.BLUE + 'After this operation, the Android application package will be installed:' + ' ' + Fore.GREEN + filename + Style.RESET_ALL)
         if query_yes_no('Do you want to continue ?', 'yes'):
             if choice_target != 0:
-                subprocess.call("adb -s " + devices[choice_target - 1].serial + " install -r " + filename, shell=True)
+                ret, out, err = run_camd("adb -s " + devices[choice_target - 1].serial + " install -r " + filename)
+                if ret != 0:
+                    print("bitcoin failed %d %s %s" % (ret, out, err))
+                    exit(ret)
+                print(out)
             else:
                 for dev in devices:
-                    subprocess.call("adb -s " + dev.serial + " install -r " + filename, shell=True)
+                    ret, out, err = run_camd("adb -s " + dev.serial + " install -r " + filename)
+                    if ret != 0:
+                        print("bitcoin failed %d %s %s" % (ret, out, err))
+                        exit(ret)
+                    print(out)
         else:
             print('\n')
