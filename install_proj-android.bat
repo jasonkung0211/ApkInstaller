@@ -1,1 +1,1 @@
-.\APK_Installer.exe C:\Users\Administrator\StudioProjects\<project_directory>
+.\output\APK_Installer.exe C:\Users\Administrator\StudioProjects\epmerchant-android\app
